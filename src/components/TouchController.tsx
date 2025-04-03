@@ -18,11 +18,11 @@ const TouchController: React.FC<TouchControllerProps> = ({ onMove }) => {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
 
-                const yRatio = y / height;  // Prüft nur den vertikalen Bereich des Touches
+                const yRatio = y / height;
 
-                if (yRatio > 0.8) {  // Nur sichtbar machen, wenn am unteren Rand des Bildschirms
+                if (yRatio > 0.8) {  // Nur aktivieren, wenn unten auf dem Bildschirm berührt wird
                     const middleX = width / 2;
-                    const middleY = height * 0.9; // 10% über dem unteren Rand
+                    const middleY = height * 0.9;
 
                     const dx = x - middleX;
                     const dy = y - middleY;
@@ -38,11 +38,11 @@ const TouchController: React.FC<TouchControllerProps> = ({ onMove }) => {
             }
         };
 
-        window.addEventListener('touchstart', handleTouchStart);
+        window.addEventListener('touchstart', handleTouchStart, { passive: true }); // passive:true erlaubt weiterhin das Pull-to-Refresh
         return () => window.removeEventListener('touchstart', handleTouchStart);
     }, [onMove]);
 
-    return null;  // Return null because it's purely event-based
+    return null;  // Komplett unsichtbar und interagiert nur durch Touch-Events
 };
 
 export default TouchController;

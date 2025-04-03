@@ -22,7 +22,19 @@ const generateRandomLabyrinth = (rows: number, cols: number): number[][] => {
         })
     );
 
-    // Depth-First Search (DFS) für Labyrinth-Erstellung mit garantierten Wegen
+    // Teleport-Bereiche links und rechts freihalten (immer frei begehbar)
+    // Definiere die mittleren Positionen links und rechts
+    const leftMiddle = Math.floor(rows / 2);
+    const rightMiddle = Math.floor(rows / 2);
+
+// Stelle sicher, dass die linke und rechte Mitte immer offen sind
+    labyrinth[leftMiddle][0] = 0; // Linker Ausgangspunkt
+    labyrinth[leftMiddle][1] = 0; // Direkt danach muss ein Weg sein
+
+    labyrinth[rightMiddle][cols - 1] = 0; // Rechter Ausgangspunkt
+    labyrinth[rightMiddle][cols - 2] = 0; // Direkt davor muss ein Weg sein
+
+    // Carving Paths mit DFS
     const carvePath = (x: number, y: number): void => {
         const directions = [
             [0, -1], // oben
@@ -47,11 +59,15 @@ const generateRandomLabyrinth = (rows: number, cols: number): number[][] => {
     // Starte das Labyrinth von der Mitte
     carvePath(1, 1);
 
-    // Öffne zufällig zusätzliche Wege für mehr Ausweichmöglichkeiten
+    // Zusätzliche Wege für bessere Spielbarkeit
     for (let i = 0; i < Math.floor((rows * cols) / 5); i++) {
         const x = Math.floor(Math.random() * (cols - 2)) + 1;
         const y = Math.floor(Math.random() * (rows - 2)) + 1;
-        labyrinth[y][x] = 0; // Freies Feld hinzufügen
+
+        // Sicherstellen, dass die Teleport Eingänge links und rechts nicht blockiert werden
+        if (!((y === leftMiddle && x <= 1) || (y === rightMiddle && x >= cols - 2))) {
+            labyrinth[y][x] = 0;
+        }
     }
 
     // Setze Startpositionen
@@ -60,13 +76,9 @@ const generateRandomLabyrinth = (rows: number, cols: number): number[][] => {
     labyrinth[6][8] = 0; // Ghost 2
     labyrinth[6][9] = 0; // Ghost 3
 
-    // Teleport-Tunnel hinzufügen
-    const midRow = Math.floor(rows / 2);
-    labyrinth[midRow][0] = 0; // Linker Teleport-Eingang
-    labyrinth[midRow][cols - 1] = 0; // Rechter Teleport-Eingang
-
     return labyrinth;
 };
+
 
 const distance = (x1: number, y1: number, x2: number, y2: number) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
 
@@ -92,7 +104,7 @@ const GamePage = () => {
 
     const movePacMan = useCallback((dx: number, dy: number) => {
         let newX = pacMan.x + dx;
-        let newY = pacMan.y + dy;
+        const newY = pacMan.y + dy;
 
         if (newX < 0) {
             newX = labyrinth[0].length - 1; // Teleportiert nach rechts
