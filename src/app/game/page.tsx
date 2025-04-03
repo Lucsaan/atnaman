@@ -1,10 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 
-const gridSize = 16;
 const initialPacManPosition = { x: 1, y: 1 };
+const initialDirection = 'right';
+
+const initialGhosts = [
+    { x: 7, y: 6 },
+    { x: 8, y: 6 },
+    { x: 9, y: 6 },
+];
 
 const labyrinth = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -22,67 +27,91 @@ const labyrinth = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];
 
-const initialGhosts = [
-    { x: 7, y: 6 },
-    { x: 8, y: 6 },
-    { x: 9, y: 6 },
-];
+const distance = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
+
+const isWall = (x, y) => labyrinth[y] && labyrinth[y][x] === 1;
 
 const GamePage = () => {
-    const [pacManPosition, setPacManPosition] = useState(initialPacManPosition);
+    const [pacMan, setPacMan] = useState(initialPacManPosition);
     const [ghosts, setGhosts] = useState(initialGhosts);
+    const [isGameOver, setIsGameOver] = useState(false);
 
-    const isWall = (x, y) => labyrinth[y] && labyrinth[y][x] === 1;
+    const movePacMan = (dx, dy) => {
+        const newX = pacMan.x + dx;
+        const newY = pacMan.y + dy;
 
-    const handleKeyDown = (e) => {
-        const { x, y } = pacManPosition;
-        let newPosition = { x, y };
-
-        if (e.key === 'ArrowUp' && !isWall(x, y - 1)) newPosition.y--;
-        if (e.key === 'ArrowDown' && !isWall(x, y + 1)) newPosition.y++;
-        if (e.key === 'ArrowLeft' && !isWall(x - 1, y)) newPosition.x--;
-        if (e.key === 'ArrowRight' && !isWall(x + 1, y)) newPosition.x++;
-
-        setPacManPosition(newPosition);
+        if (!isWall(newX, newY)) {
+            setPacMan({ x: newX, y: newY });
+        }
     };
 
     useEffect(() => {
-        const moveGhosts = () => {
-            setGhosts(prevGhosts => prevGhosts.map(ghost => {
-                const directions = ['up', 'down', 'left', 'right'];
-                const direction = directions[Math.floor(Math.random() * directions.length)];
-                let { x, y } = ghost;
+        const handleKeyDown = (event) => {
+            if (isGameOver) return;
 
-                if (direction === 'up' && !isWall(x, y - 1)) y--;
-                if (direction === 'down' && !isWall(x, y + 1)) y++;
-                if (direction === 'left' && !isWall(x - 1, y)) x--;
-                if (direction === 'right' && !isWall(x + 1, y)) x++;
-
-                return { x, y };
-            }));
+            switch (event.key) {
+                case "ArrowUp":
+                    movePacMan(0, -1);
+                    break;
+                case "ArrowDown":
+                    movePacMan(0, 1);
+                    break;
+                case "ArrowLeft":
+                    movePacMan(-1, 0);
+                    break;
+                case "ArrowRight":
+                    movePacMan(1, 0);
+                    break;
+                default:
+                    break;
+            }
         };
 
-        const interval = setInterval(moveGhosts, 500);
-        return () => clearInterval(interval);
-    }, [ghosts]);
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [pacMan, isGameOver]);
+
+    useEffect(() => {
+        const moveGhosts = () => {
+            setGhosts(prevGhosts =>
+                prevGhosts.map(ghost => {
+                    const moves = [
+                        { x: ghost.x, y: ghost.y - 1 },
+                        { x: ghost.x, y: ghost.y + 1 },
+                        { x: ghost.x - 1, y: ghost.y },
+                        { x: ghost.x + 1, y: ghost.y }
+                    ].filter(move => !isWall(move.x, move.y));
+
+                    const bestMove = moves.reduce((acc, move) =>
+                            distance(move.x, move.y, pacMan.x, pacMan.y) <
+                            distance(acc.x, acc.y, pacMan.x, pacMan.y) ? move : acc
+                        , moves[0]);
+
+                    if (bestMove.x === pacMan.x && bestMove.y === pacMan.y) {
+                        setIsGameOver(true);
+                    }
+
+                    return bestMove;
+                })
+            );
+        };
+
+        if (!isGameOver) {
+            const interval = setInterval(moveGhosts, 300);
+            return () => clearInterval(interval);
+        }
+    }, [pacMan, isGameOver]);
 
     return (
-        <main
-            className="h-screen w-screen flex flex-col items-center justify-center bg-black outline-none"
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-        >
+        <main className="h-screen w-screen flex flex-col items-center justify-center bg-black outline-none">
             <div className="grid grid-cols-16 gap-1">
                 {labyrinth.map((row, rowIndex) =>
                     row.map((cell, colIndex) => {
                         const isGhost = ghosts.some(ghost => ghost.x === colIndex && ghost.y === rowIndex);
-                        const isPacMan = pacManPosition.x === colIndex && pacManPosition.y === rowIndex;
+                        const isPacMan = pacMan.x === colIndex && pacMan.y === rowIndex;
 
                         return (
-                            <div
-                                key={`${rowIndex}-${colIndex}`}
-                                className={`w-6 h-6 relative ${isGhost || isPacMan ? '' : 'bg-gray-800'}`}
-                            >
+                            <div key={`${rowIndex}-${colIndex}`} className="w-6 h-6 relative">
                                 {isGhost && (
                                     <div className="ghost">
                                         <div className="eyes">
@@ -91,16 +120,23 @@ const GamePage = () => {
                                         </div>
                                     </div>
                                 )}
-                                {isPacMan && <div className="w-full h-full bg-yellow-400"></div>}
+                                {isPacMan && (
+                                    <div className="pacman">
+                                        <div className="eyes">
+                                            <div className="eye"></div>
+                                            <div className="eye"></div>
+                                        </div>
+                                    </div>
+                                )}
                                 {cell === 1 && <div className="w-full h-full bg-green-500"></div>}
-                                {cell === 2 && <div className="w-full h-full bg-gray-700"></div>}
                             </div>
                         );
                     })
                 )}
             </div>
+            {isGameOver && <div className="text-red-700 mt-4">Game Over! Refresh to play again.</div>}
         </main>
     );
-}
+};
 
 export default GamePage;
