@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const initialPacManPosition = { x: 1, y: 1 };
-const initialDirection = 'right';
+// const initialDirection = 'right';
 
 const initialGhosts = [
     { x: 7, y: 6 },
@@ -11,8 +11,8 @@ const initialGhosts = [
     { x: 9, y: 6 },
 ];
 
-const generateRandomLabyrinth = (rows, cols) => {
-    const labyrinth = Array.from({ length: rows }, (_, rowIndex) =>
+const generateRandomLabyrinth = (rows: number, cols: number): number[][] => {
+    const labyrinth: number[][] = Array.from({ length: rows }, (_, rowIndex) =>
         Array.from({ length: cols }, (_, colIndex) => {
             if (rowIndex === 0 || rowIndex === rows - 1 || colIndex === 0 || colIndex === cols - 1) {
                 return 1; // Äußere Wände
@@ -22,7 +22,7 @@ const generateRandomLabyrinth = (rows, cols) => {
     );
 
     // Depth-First Search (DFS) für Labyrinth-Erstellung mit garantierten Wegen
-    const carvePath = (x, y) => {
+    const carvePath = (x: number, y: number): void => {
         const directions = [
             [0, -1], // oben
             [0, 1],  // unten
@@ -62,11 +62,9 @@ const generateRandomLabyrinth = (rows, cols) => {
     return labyrinth;
 };
 
+const distance = (x1: number, y1: number, x2: number, y2: number) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
 
-
-const distance = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
-
-const isWall = (x, y, labyrinth) => labyrinth[y] && labyrinth[y][x] === 1;
+const isWall = (x: number, y: number, labyrinth: number[][]): boolean => labyrinth[y] && labyrinth[y][x] === 1;
 
 const GamePage = () => {
     const [pacMan, setPacMan] = useState(initialPacManPosition);
@@ -74,7 +72,7 @@ const GamePage = () => {
     const [isGameOver, setIsGameOver] = useState(false);
     const [points, setPoints] = useState(new Set());
     const [score, setScore] = useState(0);
-    const [labyrinth, setLabyrinth] = useState(generateRandomLabyrinth(13, 16));
+    const [labyrinth] = useState(generateRandomLabyrinth(13, 16));
 
     useEffect(() => {
         const initialPoints = new Set();
@@ -84,9 +82,9 @@ const GamePage = () => {
             });
         });
         setPoints(initialPoints);
-    }, []);
+    }, [labyrinth]);
 
-    const movePacMan = (dx, dy) => {
+    const movePacMan = useCallback((dx: number, dy: number) => {
         const newX = pacMan.x + dx;
         const newY = pacMan.y + dy;
 
@@ -103,10 +101,10 @@ const GamePage = () => {
 
             setPacMan({ x: newX, y: newY });
         }
-    };
+    }, [pacMan, points, labyrinth]);
 
     useEffect(() => {
-        const handleKeyDown = (event) => {
+        const handleKeyDown = (event: KeyboardEvent) => {
             if (isGameOver) return;
 
             switch (event.key) {
@@ -129,7 +127,7 @@ const GamePage = () => {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [pacMan, isGameOver]);
+    }, [movePacMan, isGameOver]);
 
     useEffect(() => {
         const moveGhosts = () => {
@@ -160,7 +158,7 @@ const GamePage = () => {
             const interval = setInterval(moveGhosts, 300);
             return () => clearInterval(interval);
         }
-    }, [pacMan, isGameOver]);
+    }, [pacMan, isGameOver, labyrinth]);
 
     return (
         <main className="h-screen w-screen flex flex-col items-center justify-center bg-black outline-none">
