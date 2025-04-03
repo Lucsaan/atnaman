@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import TouchController from "@/components/TouchController";
 
 const initialPacManPosition = { x: 1, y: 1 };
 // const initialDirection = 'right';
@@ -59,6 +60,11 @@ const generateRandomLabyrinth = (rows: number, cols: number): number[][] => {
     labyrinth[6][8] = 0; // Ghost 2
     labyrinth[6][9] = 0; // Ghost 3
 
+    // Teleport-Tunnel hinzufügen
+    const midRow = Math.floor(rows / 2);
+    labyrinth[midRow][0] = 0; // Linker Teleport-Eingang
+    labyrinth[midRow][cols - 1] = 0; // Rechter Teleport-Eingang
+
     return labyrinth;
 };
 
@@ -85,8 +91,14 @@ const GamePage = () => {
     }, [labyrinth]);
 
     const movePacMan = useCallback((dx: number, dy: number) => {
-        const newX = pacMan.x + dx;
-        const newY = pacMan.y + dy;
+        let newX = pacMan.x + dx;
+        let newY = pacMan.y + dy;
+
+        if (newX < 0) {
+            newX = labyrinth[0].length - 1; // Teleportiert nach rechts
+        } else if (newX >= labyrinth[0].length) {
+            newX = 0; // Teleportiert nach links
+        }
 
         if (!isWall(newX, newY, labyrinth)) {
             const newPosition = `${newX},${newY}`;
@@ -160,6 +172,7 @@ const GamePage = () => {
         }
     }, [pacMan, isGameOver, labyrinth]);
 
+
     return (
         <main className="h-screen w-screen flex flex-col items-center justify-center bg-black outline-none">
             <div className="text-white mb-4">Score: {score}</div>
@@ -196,6 +209,22 @@ const GamePage = () => {
                 )}
             </div>
             {isGameOver && <div className="text-red-700 mt-4">Game Over! Refresh to play again.</div>}
+            <TouchController onMove={(direction) => {
+                switch (direction) {
+                    case "up":
+                        movePacMan(0, -1);
+                        break;
+                    case "down":
+                        movePacMan(0, 1);
+                        break;
+                    case "left":
+                        movePacMan(-1, 0);
+                        break;
+                    case "right":
+                        movePacMan(1, 0);
+                        break;
+                }
+            }} />
         </main>
         // <main className="h-screen w-screen flex flex-col items-center justify-center bg-black outline-none">
         //     <div className="text-white mb-4">Score: {score}</div>
